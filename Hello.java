@@ -1,4 +1,5 @@
 import lombok.*;
+import java.awt.Point;
 import java.io.*;
 import java.util.*;
 
@@ -18,5 +19,21 @@ public class Hello {
             destructure value = entry;
             System.out.printf("%s %s%n", key, value);
         }
+
+        destructure left, right = new Greeting("Hello", "World");
+        System.out.printf("%s %s%n", left, right);
+
+        destructure x, y = createPoint();
+        System.out.printf("Point: (%f, %f)%n", x, y);
+    }
+
+    @Value
+    static class Greeting {
+        String left;
+        String right;
+    }
+
+    private static Point createPoint() {
+        return new Point(3, 4);
     }
 }
