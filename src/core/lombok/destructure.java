@@ -21,20 +21,5 @@
  */
 package lombok;
 
-import java.lang.annotation.Annotation;
-import java.lang.annotation.Repeatable;
-import java.util.List;
-
-/**
- * Use {@code val} as the type of any local variable declaration (even in a for-each statement), and the type will be inferred from the initializing expression.
- * For example: {@code val x = 10.0;} will infer {@code double}, and {@code val y = new ArrayList<String>();} will infer {@code ArrayList<String>}. The local variable
- * will also be made final.
- * <p>
- * Note that this is an annotation type because {@code val x = 10;} will be desugared to {@code @val final int x = 10;}
- * <p>
- * Complete documentation is found at <a href="https://projectlombok.org/features/val.html">the project lombok features page for &#64;val</a>.
- */
-@Repeatable(vals.class)
-public @interface val {
+public @interface destructure {
 }
-

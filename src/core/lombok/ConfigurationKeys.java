@@ -266,16 +266,25 @@ public class ConfigurationKeys {
 	 * If set, <em>any</em> usage of {@code @Synchronized} results in a warning / error.
 	 */
 	public static final ConfigurationKey<FlagUsageType> SYNCHRONIZED_FLAG_USAGE = new ConfigurationKey<FlagUsageType>("lombok.synchronized.flagUsage", "Emit a warning or error if @Synchronized is used.") {};
-	
+
 	// ----- val -----
-	
+
 	/**
 	 * lombok configuration: {@code lombok.val.flagUsage} = {@code WARNING} | {@code ERROR}.
-	 * 
+	 *
 	 * If set, <em>any</em> usage of {@code val} results in a warning / error.
 	 */
 	public static final ConfigurationKey<FlagUsageType> VAL_FLAG_USAGE = new ConfigurationKey<FlagUsageType>("lombok.val.flagUsage", "Emit a warning or error if 'val' is used.") {};
-	
+
+	// ----- destructure -----
+
+	/**
+	 * lombok configuration: {@code lombok.destructure.flagUsage} = {@code WARNING} | {@code ERROR}.
+	 *
+	 * If set, <em>any</em> usage of {@code destructure} results in a warning / error.
+	 */
+	public static final ConfigurationKey<FlagUsageType> DESTRUCTURE_FLAG_USAGE = new ConfigurationKey<FlagUsageType>("lombok.destructure.flagUsage", "Emit a warning or error if 'destructure' is used.") {};
+
 	// ##### Extern #####
 	
 	// ----- Logging -----

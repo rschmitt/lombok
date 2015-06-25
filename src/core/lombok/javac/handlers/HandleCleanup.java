@@ -78,7 +78,7 @@ public class HandleCleanup extends JavacAnnotationHandler<Cleanup> {
 			annotationNode.addError("@Cleanup is legal only on local variable declarations.");
 			return;
 		}
-		
+
 		JCVariableDecl decl = (JCVariableDecl)annotationNode.up().get();
 		
 		if (decl.init == null) {
