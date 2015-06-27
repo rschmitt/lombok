@@ -20,8 +20,8 @@ public class Hello {
             System.out.printf("%s %s%n", key, value);
         }
 
-        destructure left, right = new Greeting("Hello", "World");
-        System.out.printf("%s %s%n", left, right);
+        destructure left, right, isBool = new Greeting("Hello", "World", true);
+        System.out.printf("%s %s %s%n", left, right, isBool);
 
         destructure x, y = createPoint();
         System.out.printf("Point: (%f, %f)%n", x, y);
@@ -31,6 +31,7 @@ public class Hello {
     static class Greeting {
         String left;
         String right;
+        boolean isBool;
     }
 
     private static Point createPoint() {
