@@ -21,8 +21,6 @@
  */
 package lombok.javac.handlers;
 
-import com.sun.source.tree.Tree;
-import com.sun.tools.javac.code.Flags;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.JCTree.JCAnnotation;
 import com.sun.tools.javac.tree.JCTree.JCBlock;
@@ -31,9 +29,9 @@ import com.sun.tools.javac.tree.JCTree.JCEnhancedForLoop;
 import com.sun.tools.javac.tree.JCTree.JCExpression;
 import com.sun.tools.javac.tree.JCTree.JCFieldAccess;
 import com.sun.tools.javac.tree.JCTree.JCForLoop;
-import com.sun.tools.javac.tree.JCTree.JCIdent;
 import com.sun.tools.javac.tree.JCTree.JCMethodDecl;
 import com.sun.tools.javac.tree.JCTree.JCMethodInvocation;
+import com.sun.tools.javac.tree.JCTree.JCModifiers;
 import com.sun.tools.javac.tree.JCTree.JCNewArray;
 import com.sun.tools.javac.tree.JCTree.JCStatement;
 import com.sun.tools.javac.tree.JCTree.JCVariableDecl;
@@ -46,14 +44,15 @@ import lombok.destructure;
 import lombok.javac.JavacASTAdapter;
 import lombok.javac.JavacASTVisitor;
 import lombok.javac.JavacNode;
+import lombok.javac.JavacResolution;
 import lombok.javac.JavacTreeMaker;
 import lombok.javac.ResolutionResetNeeded;
 import org.mangosdk.spi.ProviderFor;
 
 import java.util.ArrayList;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.sun.source.tree.Tree.Kind.*;
 import static lombok.core.handlers.HandlerUtil.*;
 import static lombok.javac.handlers.JavacHandlerUtil.*;
 
@@ -66,30 +65,18 @@ public class HandleDestructure extends JavacASTAdapter {
 
 	@Override public void visitLocal(JavacNode localNode, JCVariableDecl local) {
 		if (!isDestructure(localNode, local)) return;
-
-		JCTree source = local.vartype;
-
 		handleFlagUsage(localNode, ConfigurationKeys.DESTRUCTURE_FLAG_USAGE, "destructure");
 
 		JavacNode ancestor = localNode.directUp();
 		JCTree parentRaw = ancestor.get();
-		if (parentRaw instanceof JCForLoop || parentRaw instanceof JCEnhancedForLoop) {
-			localNode.addError("'destructure' is not allowed in for loops");
-			return;
-		}
 
-		if (local.init instanceof JCNewArray && ((JCNewArray)local.init).elemtype == null) {
-			localNode.addError("'val' is not compatible with array initializer expressions. Use the full form (new int[] { ... } instead of just { ... })");
-			return;
-		}
+		if (illegalDestructure(localNode, local, parentRaw)) return;
 
-		if (localNode.shouldDeleteLombokAnnotations()) JavacHandlerUtil.deleteImportFromCompilationUnit(localNode, "lombok.destructure");
-
-		local.mods.flags |= Flags.FINAL;
-
-		if (!localNode.shouldDeleteLombokAnnotations()) {
-			JCAnnotation valAnnotation = recursiveSetGeneratedBy(localNode.getTreeMaker().Annotation(local.vartype, List.<JCExpression>nil()), source, localNode.getContext());
-			local.mods.annotations = local.mods.annotations == null ? List.of(valAnnotation) : local.mods.annotations.append(valAnnotation);
+		if (localNode.shouldDeleteLombokAnnotations()) {
+			JavacHandlerUtil.deleteImportFromCompilationUnit(localNode, "lombok.destructure");
+		} else {
+			JCAnnotation destructureAnnotation = recursiveSetGeneratedBy(localNode.getTreeMaker().Annotation(local.vartype, List.<JCExpression>nil()), local.vartype, localNode.getContext());
+			local.mods.annotations = local.mods.annotations == null ? List.of(destructureAnnotation) : local.mods.annotations.append(destructureAnnotation);
 		}
 
 		JCTree blockNode = ancestor.get();
@@ -115,9 +102,7 @@ public class HandleDestructure extends JavacASTAdapter {
 		for (JCStatement statement : statements) {
 			if (initExpr != null) {
 				after.append(statement);
-				continue;
-			}
-			if (!seenDeclaration) {
+			} else if (!seenDeclaration) {
 				if (statement == local) {
 					seenDeclaration = true;
 					if (local.init == null) {
@@ -127,7 +112,7 @@ public class HandleDestructure extends JavacASTAdapter {
 						initExpr = local.init;
 					}
 					lhsVars.add(local.getName());
-					local.vartype = lombokVal;
+					local.vartype = JavacResolution.createJavaLangObject(localNode.getAst());
 				} else {
 					before.append(statement);
 				}
@@ -142,7 +127,7 @@ public class HandleDestructure extends JavacASTAdapter {
 							initExpr = decl.init;
 						}
 						lhsVars.add(decl.getName());
-						decl.vartype = lombokVal;
+						decl.vartype = JavacResolution.createJavaLangObject(localNode.getAst());
 					} else {
 						localNode.getNodeFor(statement).addError("'destructure' requires an initializer expression");
 						return;
@@ -157,20 +142,20 @@ public class HandleDestructure extends JavacASTAdapter {
 		if (initExpr == null) {
 			localNode.addError("'destructure' requires an initializer expression");
 			return;
-		} else if (initExpr.getKind() == Tree.Kind.NULL_LITERAL) {
+		} else if (initExpr.getKind() == NULL_LITERAL) {
 			localNode.getNodeFor(initExpr).addError("'destructure' requires a non-null initializer");
 			return;
 		}
 		JavacTreeMaker maker = localNode.getAst().getTreeMaker();
 		Name tempvar = localNode.toName(getTempIdent());
-		JCVariableDecl jcVariableDecl = maker.VarDef(local.mods, tempvar, lombokVal, initExpr);
+		JCVariableDecl jcVariableDecl = maker.VarDef((JCModifiers) local.mods.clone(), tempvar, lombokVal, initExpr);
 		newStatements.append(jcVariableDecl);
 
 		for (Name lhsVar : lhsVars) {
 			Name methodName = localNode.toName(toGetterName(lhsVar.toString()));
 			JCFieldAccess getterSelect = maker.Select(maker.Ident(tempvar), methodName);
 			JCMethodInvocation getterInv = maker.Apply(null, getterSelect, List.<JCTree.JCExpression>nil());
-			JCVariableDecl lhsVarDecl = maker.VarDef(local.mods, lhsVar, lombokVal, getterInv);
+			JCVariableDecl lhsVarDecl = maker.VarDef((JCModifiers) local.mods.clone(), lhsVar, lombokVal, getterInv);
 			newStatements.append(lhsVarDecl);
 		}
 
@@ -185,6 +170,19 @@ public class HandleDestructure extends JavacASTAdapter {
 		} else throw new AssertionError("Should not get here");
 
 		ancestor.rebuild();
+	}
+
+	private boolean illegalDestructure(JavacNode localNode, JCVariableDecl local, JCTree parentRaw) {
+		if (parentRaw instanceof JCForLoop || parentRaw instanceof JCEnhancedForLoop) {
+			localNode.addError("'destructure' is not allowed in for loops");
+			return true;
+		}
+
+		if (local.init instanceof JCNewArray && ((JCNewArray)local.init).elemtype == null) {
+			localNode.addError("'val' is not compatible with array initializer expressions. Use the full form (new int[] { ... } instead of just { ... })");
+			return true;
+		}
+		return false;
 	}
 
 	private boolean isDestructure(JavacNode localNode, JCVariableDecl local) {
