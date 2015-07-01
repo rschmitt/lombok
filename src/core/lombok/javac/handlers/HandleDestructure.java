@@ -86,6 +86,13 @@ public class HandleDestructure extends JavacASTAdapter {
 			return;
 		}
 
+		visitStatements(localNode, local, statements);
+	}
+
+	private void visitStatements(JavacNode localNode, JCVariableDecl local, List<JCStatement> statements) {
+		JavacNode ancestor = localNode.directUp();
+		JCTree blockNode = ancestor.get();
+
 		JCExpression initExpr = null;
 		ListBuffer<JCStatement> before = new ListBuffer<JCStatement>();
 		ListBuffer<JCStatement> after = new ListBuffer<JCStatement>();
