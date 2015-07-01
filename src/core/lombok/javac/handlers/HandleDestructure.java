@@ -80,14 +80,9 @@ public class HandleDestructure extends JavacASTAdapter {
 		}
 
 		JCTree blockNode = ancestor.get();
-		final List<JCStatement> statements;
-		if (blockNode instanceof JCBlock) {
-			statements = ((JCBlock)blockNode).stats;
-		} else if (blockNode instanceof JCCase) {
-			statements = ((JCCase)blockNode).stats;
-		} else if (blockNode instanceof JCMethodDecl) {
-			statements = ((JCMethodDecl)blockNode).body.stats;
-		} else {
+		final List<JCStatement> statements = getStatements(blockNode);
+
+		if (statements == null) {
 			localNode.addError("destructuring is legal only within local variable declarations inside a block.");
 			return;
 		}
@@ -146,9 +141,14 @@ public class HandleDestructure extends JavacASTAdapter {
 		}
 
 		ListBuffer<JCStatement> newStatements = desugarVars(localNode, local, initExpr, lhsVars);
-
 		ListBuffer<JCStatement> newBlock = before.appendList(newStatements).appendList(after);
 
+		installNewBlock(blockNode, newBlock);
+
+		ancestor.rebuild();
+	}
+
+	private void installNewBlock(JCTree blockNode, ListBuffer<JCStatement> newBlock) {
 		if (blockNode instanceof JCBlock) {
 			((JCBlock)blockNode).stats = newBlock.toList();
 		} else if (blockNode instanceof JCCase) {
@@ -156,8 +156,20 @@ public class HandleDestructure extends JavacASTAdapter {
 		} else if (blockNode instanceof JCMethodDecl) {
 			((JCMethodDecl)blockNode).body.stats = newBlock.toList();
 		} else throw new AssertionError("Should not get here");
+	}
 
-		ancestor.rebuild();
+	private List<JCStatement> getStatements(JCTree blockNode) {
+		final List<JCStatement> statements;
+		if (blockNode instanceof JCBlock) {
+			statements = ((JCBlock)blockNode).stats;
+		} else if (blockNode instanceof JCCase) {
+			statements = ((JCCase)blockNode).stats;
+		} else if (blockNode instanceof JCMethodDecl) {
+			statements = ((JCMethodDecl)blockNode).body.stats;
+		} else {
+			statements = null;
+		}
+		return statements;
 	}
 
 	private ListBuffer<JCStatement> desugarVars(JavacNode localNode, JCVariableDecl local, JCExpression initExpr, ArrayList<Name> lhsVars) {
