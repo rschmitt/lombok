@@ -93,9 +93,7 @@ public class HandleDestructure extends JavacASTAdapter {
 		}
 
 		JCExpression initExpr = null;
-		JCExpression lombokVal = JavacHandlerUtil.chainDotsString(localNode, "lombok.val");
 		ListBuffer<JCStatement> before = new ListBuffer<JCStatement>();
-		ListBuffer<JCStatement> newStatements = new ListBuffer<JCStatement>();
 		ListBuffer<JCStatement> after = new ListBuffer<JCStatement>();
 		final ArrayList<Name> lhsVars = new ArrayList<Name>();
 		boolean seenDeclaration = false;
@@ -146,18 +144,8 @@ public class HandleDestructure extends JavacASTAdapter {
 			localNode.getNodeFor(initExpr).addError("'destructure' requires a non-null initializer");
 			return;
 		}
-		JavacTreeMaker maker = localNode.getAst().getTreeMaker();
-		Name tempvar = localNode.toName(getTempIdent());
-		JCVariableDecl jcVariableDecl = maker.VarDef((JCModifiers) local.mods.clone(), tempvar, lombokVal, initExpr);
-		newStatements.append(jcVariableDecl);
 
-		for (Name lhsVar : lhsVars) {
-			Name methodName = localNode.toName(toGetterName(lhsVar.toString()));
-			JCFieldAccess getterSelect = maker.Select(maker.Ident(tempvar), methodName);
-			JCMethodInvocation getterInv = maker.Apply(null, getterSelect, List.<JCTree.JCExpression>nil());
-			JCVariableDecl lhsVarDecl = maker.VarDef((JCModifiers) local.mods.clone(), lhsVar, lombokVal, getterInv);
-			newStatements.append(lhsVarDecl);
-		}
+		ListBuffer<JCStatement> newStatements = desugarVars(localNode, local, initExpr, lhsVars);
 
 		ListBuffer<JCStatement> newBlock = before.appendList(newStatements).appendList(after);
 
@@ -170,6 +158,24 @@ public class HandleDestructure extends JavacASTAdapter {
 		} else throw new AssertionError("Should not get here");
 
 		ancestor.rebuild();
+	}
+
+	private ListBuffer<JCStatement> desugarVars(JavacNode localNode, JCVariableDecl local, JCExpression initExpr, ArrayList<Name> lhsVars) {
+		ListBuffer<JCStatement> newStatements = new ListBuffer<JCStatement>();
+		JCExpression lombokVal = JavacHandlerUtil.chainDotsString(localNode, "lombok.val");
+		JavacTreeMaker maker = localNode.getAst().getTreeMaker();
+		Name tempvar = localNode.toName(getTempIdent());
+		JCVariableDecl jcVariableDecl = maker.VarDef((JCModifiers) local.mods.clone(), tempvar, lombokVal, initExpr);
+		newStatements.append(jcVariableDecl);
+
+		for (Name lhsVar : lhsVars) {
+			Name methodName = localNode.toName(toGetterName(lhsVar.toString()));
+			JCFieldAccess getterSelect = maker.Select(maker.Ident(tempvar), methodName);
+			JCMethodInvocation getterInv = maker.Apply(null, getterSelect, List.<JCExpression>nil());
+			JCVariableDecl lhsVarDecl = maker.VarDef((JCModifiers) local.mods.clone(), lhsVar, lombokVal, getterInv);
+			newStatements.append(lhsVarDecl);
+		}
+		return newStatements;
 	}
 
 	private boolean illegalDestructure(JavacNode localNode, JCVariableDecl local, JCTree parentRaw) {
