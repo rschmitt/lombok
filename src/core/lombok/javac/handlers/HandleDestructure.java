@@ -89,6 +89,20 @@ public class HandleDestructure extends JavacASTAdapter {
 		visitStatements(localNode, local, statements);
 	}
 
+	private List<JCStatement> getStatements(JCTree blockNode) {
+		final List<JCStatement> statements;
+		if (blockNode instanceof JCBlock) {
+			statements = ((JCBlock)blockNode).stats;
+		} else if (blockNode instanceof JCCase) {
+			statements = ((JCCase)blockNode).stats;
+		} else if (blockNode instanceof JCMethodDecl) {
+			statements = ((JCMethodDecl)blockNode).body.stats;
+		} else {
+			statements = null;
+		}
+		return statements;
+	}
+
 	private void visitStatements(JavacNode localNode, JCVariableDecl local, List<JCStatement> statements) {
 		JavacNode ancestor = localNode.directUp();
 		JCTree blockNode = ancestor.get();
@@ -162,20 +176,6 @@ public class HandleDestructure extends JavacASTAdapter {
 		} else if (blockNode instanceof JCMethodDecl) {
 			((JCMethodDecl)blockNode).body.stats = newBlock.toList();
 		} else throw new AssertionError("Should not get here");
-	}
-
-	private List<JCStatement> getStatements(JCTree blockNode) {
-		final List<JCStatement> statements;
-		if (blockNode instanceof JCBlock) {
-			statements = ((JCBlock)blockNode).stats;
-		} else if (blockNode instanceof JCCase) {
-			statements = ((JCCase)blockNode).stats;
-		} else if (blockNode instanceof JCMethodDecl) {
-			statements = ((JCMethodDecl)blockNode).body.stats;
-		} else {
-			statements = null;
-		}
-		return statements;
 	}
 
 	private ListBuffer<JCStatement> desugarVars(JavacNode localNode, JCVariableDecl local, JCExpression initExpr, ArrayList<Name> lhsVars) {
