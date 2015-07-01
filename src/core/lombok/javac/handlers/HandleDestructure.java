@@ -68,9 +68,9 @@ public class HandleDestructure extends JavacASTAdapter {
 		handleFlagUsage(localNode, ConfigurationKeys.DESTRUCTURE_FLAG_USAGE, "destructure");
 
 		JavacNode ancestor = localNode.directUp();
-		JCTree parentRaw = ancestor.get();
+		JCTree blockNode = ancestor.get();
 
-		if (illegalDestructure(localNode, local, parentRaw)) return;
+		if (illegalDestructure(localNode, local, blockNode)) return;
 
 		if (localNode.shouldDeleteLombokAnnotations()) {
 			JavacHandlerUtil.deleteImportFromCompilationUnit(localNode, "lombok.destructure");
@@ -79,7 +79,6 @@ public class HandleDestructure extends JavacASTAdapter {
 			local.mods.annotations = local.mods.annotations == null ? List.of(destructureAnnotation) : local.mods.annotations.append(destructureAnnotation);
 		}
 
-		JCTree blockNode = ancestor.get();
 		final List<JCStatement> statements = getStatements(blockNode);
 
 		if (statements == null) {
