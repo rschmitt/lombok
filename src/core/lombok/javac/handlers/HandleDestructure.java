@@ -61,7 +61,7 @@ import static lombok.javac.handlers.JavacHandlerUtil.*;
 @ResolutionResetNeeded
 public class HandleDestructure extends JavacASTAdapter {
 	private static final String PREFIX = "$$lombok$destructure$temp";
-	private static final AtomicInteger sequenceNumber = new AtomicInteger(0);
+	private final AtomicInteger sequenceNumber = new AtomicInteger(0);
 
 	@Override public void visitLocal(JavacNode localNode, JCVariableDecl local) {
 		if (!isDestructure(localNode, local)) return;
@@ -216,7 +216,7 @@ public class HandleDestructure extends JavacASTAdapter {
 		return true;
 	}
 
-	private static String getTempIdent() {
+	private String getTempIdent() {
 		return PREFIX + sequenceNumber.getAndIncrement();
 	}
 
