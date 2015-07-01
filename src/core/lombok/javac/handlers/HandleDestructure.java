@@ -119,9 +119,9 @@ public class HandleDestructure extends JavacASTAdapter {
 				if (statement == local) {
 					seenDeclaration = true;
 					if (local.init == null) {
-						localNode.getNodeFor(statement).addWarning("This begins a multi-variable destructure");
+//						localNode.getNodeFor(statement).addWarning("This begins a multi-variable destructure");
 					} else {
-						localNode.getNodeFor(statement).addWarning("This destructures into a single variable");
+//						localNode.getNodeFor(statement).addWarning("This destructures into a single variable");
 						initExpr = local.init;
 					}
 					lhsVars.add(local.getName());
@@ -134,19 +134,19 @@ public class HandleDestructure extends JavacASTAdapter {
 					JCVariableDecl decl = (JCVariableDecl) statement;
 					if (isDestructure(localNode.getNodeFor(decl), decl)) {
 						if (decl.init == null) {
-							localNode.getNodeFor(decl).addWarning("This is a continuation of the destructuring");
+//							localNode.getNodeFor(decl).addWarning("This is a continuation of the destructuring");
 						} else {
-							localNode.getNodeFor(decl).addWarning("This is the end of the destructuring");
+//							localNode.getNodeFor(decl).addWarning("This is the end of the destructuring");
 							initExpr = decl.init;
 						}
 						lhsVars.add(decl.getName());
 						decl.vartype = JavacResolution.createJavaLangObject(localNode.getAst());
 					} else {
-						localNode.getNodeFor(statement).addError("'destructure' requires an initializer expression");
+//						localNode.getNodeFor(statement).addError("'destructure' requires an initializer expression");
 						return;
 					}
 				} else {
-					localNode.getNodeFor(statement).addError("'destructure' requires an initializer expression");
+//					localNode.getNodeFor(statement).addError("'destructure' requires an initializer expression");
 					return;
 				}
 			}
